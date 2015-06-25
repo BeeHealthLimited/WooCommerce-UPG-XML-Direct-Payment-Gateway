@@ -28,9 +28,9 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         $this->checkcode        = $this->get_option( 'checkcode' );
         $this->ordstatus        = $this->get_option( 'ordstatus' );
         $this->filename         = $this->get_option( 'filename' );
-        $this->activateas       = isset( $this->settings['activateas'] ) && $this->settings['activateas'] == 'yes' ? 'yes' : 'no';
         $this->phrase           = $this->get_option( 'phrase' );
         $this->referrer         = $this->get_option( 'referrer' );
+		$this->testmode         = isset( $this->settings['testmode'] ) && $this->settings['testmode'] == 'yes' ? 'yes' : 'no';
 
 		$this->supports[] = 'default_credit_card_form';
 		
@@ -224,11 +224,11 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
 		$response = simplexml_load_string( $xmlResponse );
 		if ((string)$response->status == 'OK'){
 			
-			// Mark order as Paid
-            $customer_order->payment_complete();
- 
-            // Empty the cart (Very important step)
+			// Mark order as Paid and Empty cart
+            $order->update_status( 'processing', sprintf( __( 'Order processed via UPG, Transaction Reference: <b>%s</b>', 'woocommerce' ), $response->reference ) );
+            $order->reduce_order_stock();
             $woocommerce->cart->empty_cart();
+            $order->payment_complete();
 			
 			return array(
 				'result'    => 'success',
@@ -296,12 +296,14 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
 		$xmlContrsuct .= '<transaction>';
 		//Card details
 		
-		$expirydate = str_replace( array( '/', ' '), '', $_POST['UPG_api-card-expiry'] );
+		$expirydate = 	str_replace( array( '/', ' '), '', $_POST['UPG_api-card-expiry'] );
+		$cardnumber = 	str_replace( array(' ', '-' ), '', $_POST['UPG_api-card-number'] );
+		$cardcv2 = 		str_replace( array(' ', '-' ), '', $_POST['UPG_api-card-cvc'] );
 		
-		$xmlContrsuct .= '<cardnumber>'.str_replace( array(' ', '-' ), '', $_POST['UPG_api-card-number'] ).'</cardnumber>';
+		$xmlContrsuct .= '<cardnumber>'.$cardnumber.'</cardnumber>';
 		$xmlContrsuct .= '<cardexpiremonth>'.substr($expirydate, 0, 2).'</cardexpiremonth>';
 		$xmlContrsuct .= '<cardexpireyear>'.substr($expirydate, 2).'</cardexpireyear>';
-		$xmlContrsuct .= '<cv2>'.str_replace( array(' ', '-' ), '', $_POST['UPG_api-card-cvc'] ).'</cv2>';
+		$xmlContrsuct .= '<cv2>'.$cardcv2.'</cv2>';
         //Cardholder details
         $xmlContrsuct .= '<cardholdersname>'.$order->billing_first_name.' '.$order->billing_last_name.'</cardholdersname>';
         $xmlContrsuct .= '<cardholdersemail>'.$order->billing_email.'</cardholdersemail>';
