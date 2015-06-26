@@ -242,7 +242,7 @@ abstract class WC_Payment_Gateway extends WC_Settings_API {
 	 * @param  string $reason
 	 * @return bool|WP_Error True or false based on success, or a WP_Error object
 	 */
-	public function process_refund( $order_id, $amount = null, $reason = '', $password = '' ) {
+	public function process_refund( $order_id, $amount = null, $reason = '' ) {
 		return false;
 	}
 
