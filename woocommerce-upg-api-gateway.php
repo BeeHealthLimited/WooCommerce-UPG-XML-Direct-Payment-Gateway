@@ -382,11 +382,11 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         //Cardholder details
         $xmlContrsuct .= '<cardholdersname>'.$order->billing_first_name.' '.$order->billing_last_name.'</cardholdersname>';
         $xmlContrsuct .= '<cardholdersemail>'.$order->billing_email.'</cardholdersemail>';
-        $xmlContrsuct .= '<cardholderaddr1>6347</cardholderaddr1>';
+        $xmlContrsuct .= '<cardholderaddr1>'.$order->billing_address_1.'</cardholderaddr1>';
         $xmlContrsuct .= '<cardholderaddr2>'.$order->billing_address_2.'</cardholderaddr2>';
         $xmlContrsuct .= '<cardholdercity>'.$order->billing_city.'</cardholdercity>';
         $xmlContrsuct .= '<cardholderstate>'.$order->billing_state.'</cardholderstate>';
-        $xmlContrsuct .= '<cardholderpostcode>178</cardholderpostcode>';
+        $xmlContrsuct .= '<cardholderpostcode>'.$order->billing_postcode.'</cardholderpostcode>';
         $xmlContrsuct .= '<cardholdercountry>'.$order->billing_country.'</cardholdercountry>';
         $xmlContrsuct .= '<cardholdertelephonenumber>'.$order->billing_phone.'</cardholdertelephonenumber>';
 
