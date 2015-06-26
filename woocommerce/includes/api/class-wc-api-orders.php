@@ -1586,7 +1586,7 @@ class WC_API_Orders extends WC_API_Resource {
 				$order = wc_get_order( $order_id );
 
 				if ( isset( $payment_gateways[ $order->payment_method ] ) && $payment_gateways[ $order->payment_method ]->supports( 'refunds' ) ) {
-					$result = $payment_gateways[ $order->payment_method ]->process_refund( $order_id, $refund->get_refund_amount(), $refund->get_refund_reason() );
+					$result = $payment_gateways[ $order->payment_method ]->process_refund( $order_id, $refund->get_refund_amount(), $refund->get_refund_reason(), $refund->get_refund_password() );
 
 					if ( is_wp_error( $result ) ) {
 						return $result;

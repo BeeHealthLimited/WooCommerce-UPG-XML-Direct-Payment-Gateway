@@ -276,6 +276,13 @@ if ( wc_tax_enabled() ) {
 				<div class="clear"></div>
 			</td>
 		</tr>
+		<tr>
+			<td class="label"><label for="refund_password"><?php _e( 'UPG Password (required)', 'woocommerce' ); ?>:</label></td>
+			<td class="total">
+				<input type="password" class="password" id="refund_password" name="refund_password" />
+				<div class="clear"></div>
+			</td>
+		</tr>
 	</table>
 	<div class="clear"></div>
 	<div class="refund-actions">

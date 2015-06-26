@@ -96,4 +96,14 @@ class WC_Order_Refund extends WC_Abstract_Order {
 	public function get_refund_reason() {
 		return apply_filters( 'woocommerce_refund_reason', $this->reason, $this );
 	}
+	
+	/**
+	 * Get refunded password
+	 *
+	 * @since 2.2
+	 * @return string
+	 */
+	public function get_refund_password() {
+		return apply_filters( 'woocommerce_refund_password', $this->refund_password, $this );
+	}
 }
