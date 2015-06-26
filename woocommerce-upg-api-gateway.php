@@ -297,7 +297,7 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
 		$response = simplexml_load_string( $xmlResponse );
 		$errorMsg = '.';
 		if ((string)$response->status == 'OK'){
-			//TODO
+			return true;
 		}else{
 			if ((string)$response->statustext == 'INVALID_LOGIN'){
 				$errorMsg = ': Invalid login details';
