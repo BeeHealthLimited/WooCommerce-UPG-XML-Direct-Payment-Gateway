@@ -15,6 +15,9 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         $this->liveurl          = 'https://www.secure-server-hosting.com/secutran/api.php';
         $this->testurl          = 'https://test.secure-server-hosting.com/secutran/api.php';
         $this->method_title     = __( 'UPG plc api', 'woocommerce' );
+        
+        // Let Woocommerce know what features we support
+        $this->supports         = array('default_credit_card_form', 'products', 'refunds');
 
         // Load the settings.
         $this->init_form_fields();
@@ -37,14 +40,11 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         $this->upg_error        = $this->get_option( 'upg_error' );
         $this->transation_error = $this->get_option( 'transation_error' );
         $this->error_reason     = isset( $this->settings['error_reason'] ) && $this->settings['error_reason'] == 'yes' ? 'yes' : 'no';
-
-        // Let Woocommerce know what features we support
-        $this->supports         = array('default_credit_card_form','refunds');
         
         // Actions
         add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ), 0);
         add_action( 'woocommerce_receipt_' . $this->id, array($this, 'receipt_page'));
-        add_action('woocommerce_api_'.strtolower(get_class($this)), array(&$this, 'check_return' ));
+        add_action( 'woocommerce_credit_card_form_start', array( $this, 'before_cc_form' ) );
     }
 
     /**
@@ -205,17 +205,25 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         return $this->liveurl;
     }
     
+    public function before_cc_form( $gateway_id ) {
+        global $woocommerce;
+        
+        if ( $gateway_id === $this->id && $this->testmode == 'yes' ) {
+            echo '<strong>Gateway is running in test mode</br>Enter an expiry date in the future only.</br></br></strong>';
+        }
+    }
+    
     public function process_payment( $order_id ) {
         global $woocommerce;
         $order = new WC_Order( $order_id );
         
         $response = simplexml_load_string( $this->talk_to_upg($this->get_payment_xml( $order_id )));
+        $woocommerce->cart->empty_cart();
         if ((string)$response->status == 'OK'){
             $tran_id = sanitize_text_field( $response->reference );
             $tran_cv = sanitize_text_field( $response->cv2avsresult );
             $tran_ca = sanitize_text_field( $response->cardtype );
             $order->reduce_order_stock();
-            $woocommerce->cart->empty_cart();
             $order->add_order_note( __('TRANSATION: '.$tran_id.' - CV2: '.$tran_cv.' - CARD: '.$tran_ca , 'woothemes') );
             $order->payment_complete( $tran_id );
             
@@ -256,6 +264,7 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
             $errorMsg = $this->transation_error;
             if ($this->error_reason == 'yes'){
                 $errorMsg .= '</br>Additional information: '.$tran_reason;
+                $errorMsg .= '</br></br>Your order details have been saved in your <a href="/my-account">account</a>';
             }
         }
         
@@ -263,6 +272,7 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
     }
     
     public function process_refund( $order_id, $amount = null, $reason = '', $refund_pass = '' ) {
+
         $this->order = new WC_Order( $order_id );
         $this->transaction_id = $this->order->get_transaction_id();
         
@@ -334,15 +344,17 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         global $woocommerce;
 
         $xmlContrsuct  = '<?xml version ="1.0"?>';
+        $xmlContrsuct .= '<request>';
         $xmlContrsuct .= '<type>refund</type>';
         $xmlContrsuct .= '<authentication>';
         $xmlContrsuct .= '<shreference>'.$this->reference.'</shreference>';
         $xmlContrsuct .= '<password>'.$refund_pass.'</password>';
         $xmlContrsuct .= '</authentication>';
         $xmlContrsuct .= '<transaction>';
-        $xmlContrsuct .= '<orderid>'.$transaction_id.'</orderid>';
-        $xmlContrsuct .= '<subtotal>'.$amount.'</subtotal>';
+        $xmlContrsuct .= '<reference>'.$transaction_id.'</reference>';
+        $xmlContrsuct .= '<amount>'.$amount.'</amount>';
         $xmlContrsuct .= '</transaction>';
+        $xmlContrsuct .= '</request>';
 
         return $xmlContrsuct;
     }
@@ -388,18 +400,31 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         $xmlContrsuct .= '</authentication>';
         $xmlContrsuct .= '<transaction>';
         //Card details
-        $xmlContrsuct .= '<cardnumber>'.$cardnumber.'</cardnumber>';
+        if($this->testmode == 'yes'){
+            $xmlContrsuct .= '<cardnumber>4929421234600821</cardnumber>';
+            $xmlContrsuct .= '<cv2>356</cv2>';
+        }else{
+            $xmlContrsuct .= '<cardnumber>'.$cardnumber.'</cardnumber>';
+            $xmlContrsuct .= '<cv2>'.$cardcv2.'</cv2>';
+        }
         $xmlContrsuct .= '<cardexpiremonth>'.substr($expirydate, 0, 2).'</cardexpiremonth>';
-        $xmlContrsuct .= '<cardexpireyear>'.substr($expirydate, 2).'</cardexpireyear>';
-        $xmlContrsuct .= '<cv2>'.$cardcv2.'</cv2>';
+        $xmlContrsuct .= '<cardexpireyear>'.substr($expirydate, -2).'</cardexpireyear>';
         //Cardholder details
         $xmlContrsuct .= '<cardholdersname>'.$order->billing_first_name.' '.$order->billing_last_name.'</cardholdersname>';
         $xmlContrsuct .= '<cardholdersemail>'.$order->billing_email.'</cardholdersemail>';
-        $xmlContrsuct .= '<cardholderaddr1>'.$order->billing_address_1.'</cardholderaddr1>';
+        if($this->testmode == 'yes'){
+            $xmlContrsuct .= '<cardholderaddr1>6347</cardholderaddr1>';
+        }else{
+            $xmlContrsuct .= '<cardholderaddr1>'.$order->billing_address_1.'</cardholderaddr1>';
+        }
         $xmlContrsuct .= '<cardholderaddr2>'.$order->billing_address_2.'</cardholderaddr2>';
         $xmlContrsuct .= '<cardholdercity>'.$order->billing_city.'</cardholdercity>';
         $xmlContrsuct .= '<cardholderstate>'.$order->billing_state.'</cardholderstate>';
-        $xmlContrsuct .= '<cardholderpostcode>'.$order->billing_postcode.'</cardholderpostcode>';
+        if($this->testmode == 'yes'){
+            $xmlContrsuct .= '<cardholderpostcode>178</cardholderpostcode>';
+        }else{
+            $xmlContrsuct .= '<cardholderpostcode>'.$order->billing_postcode.'</cardholderpostcode>';
+        }
         $xmlContrsuct .= '<cardholdercountry>'.$order->billing_country.'</cardholdercountry>';
         $xmlContrsuct .= '<cardholdertelephonenumber>'.$order->billing_phone.'</cardholdertelephonenumber>';
         // Order details
@@ -426,7 +451,6 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         return array(
             'product_id',
             'name',
-            'sku',
             'line_total',
             'line_tax_data',
             '_line_tax_data',
