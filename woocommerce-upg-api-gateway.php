@@ -209,7 +209,7 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         global $woocommerce;
         
         if ( $gateway_id === $this->id && $this->testmode == 'yes' ) {
-            echo '<strong>Gateway is running in test mode</br>Enter an expiry date in the future only.</br></br></strong>';
+            echo '<strong>Gateway is running in test mode</strong></br>Enter the following details to test:</br><strong>Address:</strong> 4-7 The Hay Market, Grantham,NG32 4HG</br><strong>Card No:</strong> 5434 8499 9999 9993</br><strong>CV2:</strong> 557</br><strong>Expiry:</strong> 12/15</br></br>';
         }
     }
     
@@ -218,12 +218,12 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         $order = new WC_Order( $order_id );
         
         $response = simplexml_load_string( $this->talk_to_upg($this->get_payment_xml( $order_id )));
-        $woocommerce->cart->empty_cart();
         if ((string)$response->status == 'OK'){
             $tran_id = sanitize_text_field( $response->reference );
             $tran_cv = sanitize_text_field( $response->cv2avsresult );
             $tran_ca = sanitize_text_field( $response->cardtype );
             $order->reduce_order_stock();
+            $woocommerce->cart->empty_cart();
             $order->add_order_note( __('TRANSATION: '.$tran_id.' - CV2: '.$tran_cv.' - CARD: '.$tran_ca , 'woothemes') );
             $order->payment_complete( $tran_id );
             
@@ -238,34 +238,21 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
     }
     
     function handle_payment_error($error_id = '', $tran_reason = ''){
-        $errorMsg ='.';
-        if ((string)$error_id == 'DATABASE_ERROR'){
-            $errorMsg = $this->database_error;
-        }
-        if ((string)$error_id == 'INVALID_LOGIN'){
-            $errorMsg = $this->invalid_login;
-        }
-        if ((string)$error_id == 'NO_XML_PASSED'){
-            $errorMsg = $this->no_xml_passed;
-        }
-        if ((string)$error_id == 'BAD_XML_PASSED'){
-            $errorMsg = $this->bad_xml_passed;
-        }
-        if ((string)$error_id == 'DATA_ERROR'){
-            $errorMsg = $this->data_error;
-        }
-        if ((string)$error_id == 'CREDIT_ERROR'){
-            $errorMsg = $this->credit_error;
-        }
-        if ((string)$error_id == 'UPG_ERROR'){
-            $errorMsg = $this->upg_error;
-        }
-        if ((string)$error_id == 'TRANSACTION_ERROR'){
-            $errorMsg = $this->transation_error;
-            if ($this->error_reason == 'yes'){
-                $errorMsg .= '</br>Additional information: '.$tran_reason;
-                $errorMsg .= '</br></br>Your order details have been saved in your <a href="/my-account">account</a>';
-            }
+
+        $errorArray = array(
+            'DATABASE_ERROR'        => $this->database_error,
+            'INVALID_LOGIN'         => $this->invalid_login,
+            'NO_XML_PASSED'         => $this->no_xml_passed,
+            'BAD_XML_PASSED'        => $this->bad_xml_passed,
+            'DATA_ERROR'            => $this->data_error,
+            'CREDIT_ERROR'          => $this->credit_error,
+            'UPG_ERROR'             => $this->upg_error,
+            'TRANSACTION_ERROR'     => $this->transation_error
+        );
+
+        $errorMsg = $errorArray[(string)$error_id].'</br>';
+        if ((string)$error_id === 'TRANSACTION_ERROR' && (string)$this->error_reason === 'yes'){
+            $errorMsg .= '</br>Additional error information: '.$tran_reason;
         }
         
         return wc_add_notice( $errorMsg, 'error' );
@@ -288,41 +275,21 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
     }
     
     function handle_refund_error($error_id = ''){
-        $errorMsg ='.';
-        if ((string)$error_id == 'TRANSACTION_ID'){
-            $errorMsg = ': Transaction ID is missing.';
-        }
-        if ((string)$error_id == 'UPG_PASS'){
-            $errorMsg = ': UPG Password is missing.';
-        }
-        if ((string)$error_id == 'DATABASE_ERROR'){
-            $errorMsg = ': Please contact support (ref DBE).';
-        }
-        if ((string)$error_id == 'INVALID_LOGIN'){
-            $errorMsg = ': Invalid login details (ref ILD).';
-        }
-        if ((string)$error_id == 'NO_XML_PASSED'){
-            $errorMsg = ': Please contact support (ref NXP).';
-        }
-        if ((string)$error_id == 'BAD_XML_PASSED'){
-            $errorMsg = ': Please contact support (ref BXP).';
-        }
-        if ((string)$error_id == 'DATA_ERROR'){
-            $errorMsg = ': Please contact support (ref DAE).';
-        }
-        if ((string)$error_id == 'CREDIT_ERROR'){
-            $errorMsg = ': Please contact support (ref CAE).';
-        }
-        if ((string)$error_id == 'UPG_ERROR'){
-            $errorMsg = ': Please contact support (ref UPE).';
-        }
-        if ((string)$error_id == 'TRANSACTION_ERROR'){
-            $errorMsg = ': Please contact support (ref TRE).';
-        }
         
-        return new WP_Error( 'upg_refund_error',
-                sprintf(__('Credit Card Refund failed%s', 'woocommerce' ),$errorMsg)
-            );
+        $errorArray = array(
+            'TRANSACTION_ID'        => ': Transaction ID is missing.',
+            'UPG_PASS'              => ': UPG Password is missing.',
+            'DATABASE_ERROR'        => ': Please contact support (ref DBE).',
+            'INVALID_LOGIN'         => ': Invalid login details (ref ILD).',
+            'NO_XML_PASSED'         => ': Please contact support (ref NXP).',
+            'BAD_XML_PASSED'        => ': Please contact support (ref BXP).',
+            'DATA_ERROR'            => ': Please contact support (ref DAE).',
+            'CREDIT_ERROR'          => ': Please contact support (ref CAE).',
+            'UPG_ERROR'             => ': Please contact support (ref UPE).',
+            'TRANSACTION_ERROR'     => ': Please contact support (ref TRE).',
+        );
+        
+        return new WP_Error( 'upg_refund_error', sprintf(__('Credit Card Refund failed%s', 'woocommerce' ),$errorArray[(string)$error_id] ) );
     }
     
     function talk_to_upg($xmlDocument){
@@ -361,8 +328,8 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
     
     function get_payment_xml( $order_id ) {
         global $woocommerce;
+        global $product;
         $order = new WC_Order( $order_id );
-        
         $Secuitems = '';
         foreach($order->get_items() AS $item){
             $Options = array();
@@ -373,9 +340,14 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
                 }
             }
             
-            $Secuitems .= '['.$item['product_id'].'|'.$item['sku'].'|'.$item['name'];
+            $product = new WC_Product($item['product_id']);
+            
+            $Secuitems .= '['.$item['product_id'].'|'.$product->get_sku().'|'.$item['name'];
             if(!empty($Options)){
                 foreach($Options AS $Key => $Value){
+                    if ((string)$Key === 'pa_quantity'){
+                        $Key = 'Quantity';
+                    }
                     $Secuitems .= ', '.$Key.': '.$Value;
                 }
             }
@@ -400,31 +372,18 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         $xmlContrsuct .= '</authentication>';
         $xmlContrsuct .= '<transaction>';
         //Card details
-        if($this->testmode == 'yes'){
-            $xmlContrsuct .= '<cardnumber>4929421234600821</cardnumber>';
-            $xmlContrsuct .= '<cv2>356</cv2>';
-        }else{
-            $xmlContrsuct .= '<cardnumber>'.$cardnumber.'</cardnumber>';
-            $xmlContrsuct .= '<cv2>'.$cardcv2.'</cv2>';
-        }
+        $xmlContrsuct .= '<cardnumber>'.$cardnumber.'</cardnumber>';
+        $xmlContrsuct .= '<cv2>'.$cardcv2.'</cv2>';
         $xmlContrsuct .= '<cardexpiremonth>'.substr($expirydate, 0, 2).'</cardexpiremonth>';
         $xmlContrsuct .= '<cardexpireyear>'.substr($expirydate, -2).'</cardexpireyear>';
         //Cardholder details
         $xmlContrsuct .= '<cardholdersname>'.$order->billing_first_name.' '.$order->billing_last_name.'</cardholdersname>';
         $xmlContrsuct .= '<cardholdersemail>'.$order->billing_email.'</cardholdersemail>';
-        if($this->testmode == 'yes'){
-            $xmlContrsuct .= '<cardholderaddr1>6347</cardholderaddr1>';
-        }else{
-            $xmlContrsuct .= '<cardholderaddr1>'.$order->billing_address_1.'</cardholderaddr1>';
-        }
+        $xmlContrsuct .= '<cardholderaddr1>'.$order->billing_address_1.'</cardholderaddr1>';
         $xmlContrsuct .= '<cardholderaddr2>'.$order->billing_address_2.'</cardholderaddr2>';
         $xmlContrsuct .= '<cardholdercity>'.$order->billing_city.'</cardholdercity>';
         $xmlContrsuct .= '<cardholderstate>'.$order->billing_state.'</cardholderstate>';
-        if($this->testmode == 'yes'){
-            $xmlContrsuct .= '<cardholderpostcode>178</cardholderpostcode>';
-        }else{
-            $xmlContrsuct .= '<cardholderpostcode>'.$order->billing_postcode.'</cardholderpostcode>';
-        }
+        $xmlContrsuct .= '<cardholderpostcode>'.$order->billing_postcode.'</cardholderpostcode>';
         $xmlContrsuct .= '<cardholdercountry>'.$order->billing_country.'</cardholdercountry>';
         $xmlContrsuct .= '<cardholdertelephonenumber>'.$order->billing_phone.'</cardholdertelephonenumber>';
         // Order details
@@ -441,6 +400,7 @@ class WC_Gateway_UPG_api extends WC_Payment_Gateway {
         $xmlContrsuct .= '</request>';
         
         return $xmlContrsuct;
+        
     }
     
     function currency_format($Number){
