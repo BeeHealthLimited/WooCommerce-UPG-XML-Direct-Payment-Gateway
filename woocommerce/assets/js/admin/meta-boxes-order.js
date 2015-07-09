@@ -637,7 +637,7 @@ jQuery( function ( $ ) {
 				if ( window.confirm( woocommerce_admin_meta_boxes.i18n_do_refund ) ) {
 					var refund_amount = $( 'input#refund_amount' ).val();
 					var refund_reason = $( 'input#refund_reason' ).val();
-					var refund_password = $( 'input#refund_password' ).val();
+                    var refund_password = $( 'input#refund_password' ).val();
 
 					// Get line item refunds
 					var line_item_qtys       = {};
@@ -675,7 +675,7 @@ jQuery( function ( $ ) {
 						order_id:               woocommerce_admin_meta_boxes.post_id,
 						refund_amount:          refund_amount,
 						refund_reason:          refund_reason,
-						refund_password:		refund_password,
+                        refund_password:		refund_password,
 						line_item_qtys:         JSON.stringify( line_item_qtys, null, '' ),
 						line_item_totals:       JSON.stringify( line_item_totals, null, '' ),
 						line_item_tax_totals:   JSON.stringify( line_item_tax_totals, null, '' ),
